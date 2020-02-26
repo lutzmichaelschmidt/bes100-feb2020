@@ -1,5 +1,6 @@
 ﻿using LibraryApi.Domain;
 using LibraryApi.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -18,7 +19,15 @@ namespace LibraryApi.Controllers
             Context = context;
         }
 
+        /// <summary>
+        /// Add a Book To the Inventory
+        /// </summary>
+        /// <param name="bookToAdd">The details of the book to add</param>
+        /// <returns></returns>
         [HttpPost("books")]
+        [Produces("application/json")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<GetABookResponse>> AddABook([FromBody] PostBookRequest bookToAdd)
         {
             if(!ModelState.IsValid)
@@ -95,6 +104,41 @@ namespace LibraryApi.Controllers
                 }).ToListAsync();
             response.Genre = genre;
             return Ok(response);
+        }
+
+        [HttpDelete("books/{id:int}")]
+        public async Task<ActionResult> RemoveABook(int id)
+        {
+            var book = await GetBooksInInventory()
+                .Where(b => b.Id == id)
+                .SingleOrDefaultAsync();
+
+            if(book!=null)
+            {
+                book.InInventory = false;
+                await Context.SaveChangesAsync();
+            }
+
+            return NoContent();
+        }
+
+
+        [HttpPut("books/{id:int}/numberofpages")]
+        public async Task<ActionResult> UpdatePages(int id, [FromBody] int newPages)
+        {
+            var book = await GetBooksInInventory()
+                .Where(b => b.Id == id)
+                .SingleOrDefaultAsync();
+
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            book.NumberOfPages = newPages;
+            await Context.SaveChangesAsync();
+            return NoContent();
+
         }
 
         private IQueryable<Book> GetBooksInInventory()
